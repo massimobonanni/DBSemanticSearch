@@ -1,0 +1,60 @@
+@page "/search"
+@inject SemanticSearchClient Client
+
+<PageTitle>Ricerca semantica</PageTitle>
+<h1>Ricerca semantica</h1>
+<p>Inserisci una frase: vengono restituiti i cinque testi semanticamente più vicini.</p>
+<label for="query" class="form-label">Testo da cercare</label>
+<textarea id="query" class="form-control mb-3" rows="3" maxlength="10000" @bind="query"></textarea>
+<button type="button" class="btn btn-primary" disabled="@busy" @onclick="SearchAsync">Cerca</button>
+
+@if (error is not null)
+{
+    <p role="alert" class="alert alert-danger mt-3">@error</p>
+}
+@if (results is not null)
+{
+    <h2 class="mt-4">Risultati</h2>
+    @if (results.Count == 0)
+    {
+        <p role="status">Non ci sono testi nella banca dati.</p>
+    }
+    else
+    {
+        <ol class="list-group list-group-numbered">
+            @foreach (var hit in results)
+            {
+                <li class="list-group-item">
+                    <span class="document-text">@hit.Document.Text</span>
+                    <small class="d-block text-muted">Distanza coseno: @hit.Distance.ToString("F4")</small>
+                </li>
+            }
+        </ol>
+    }
+}
+
+@code {
+    private string query = "";
+    private bool busy;
+    private string? error;
+    private IReadOnlyList<SearchResult>? results;
+
+    private async Task SearchAsync()
+    {
+        busy = true;
+        error = null;
+        results = null;
+        try
+        {
+            results = (await Client.SearchAsync(query)).Results;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

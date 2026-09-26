@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "DB_CONNECTION_STRING": "Host=localhost;Port=5432;Database=semantic_search;Username=postgres;Password=REPLACE_ME",
+    "EMBEDDING_ENDPOINT": "https://REPLACE_ME.openai.azure.com/",
+    "EMBEDDING_DEPLOYMENT": "text-embedding-3-small",
+    "EMBEDDING_DIMENSIONS": "1536",
+    "EMBEDDING_AUTH_MODE": "DefaultAzureCredential"
+  }
+}

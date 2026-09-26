@@ -1,0 +1,90 @@
+@page "/texts"
+@inject SemanticSearchClient Client
+
+<PageTitle>Aggiungi testi</PageTitle>
+<h1>Aggiungi testi</h1>
+
+<section class="mb-5">
+    <h2>Testo singolo</h2>
+    <label for="new-text" class="form-label">Testo da vettorizzare</label>
+    <textarea id="new-text" class="form-control mb-3" rows="5" maxlength="10000" @bind="text"></textarea>
+    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="AddTextAsync">Salva testo</button>
+    @if (saved is not null)
+    {
+        <p role="status" class="alert alert-success mt-3">Testo salvato: @saved.Id</p>
+    }
+</section>
+
+<section>
+    <h2>Carica un file JSON</h2>
+    <p>Formato: <code>{"texts":["Primo testo","Secondo testo"]}</code> (massimo 100 elementi, file fino a 1 MiB).
+        Ogni elemento valido viene salvato anche se altri elementi falliscono.</p>
+    <InputFile OnChange="UploadAsync" accept=".json,application/json" disabled="@busy" />
+    @if (batch is not null)
+    {
+        <p role="status" class="alert alert-info mt-3">Salvati @batch.Inserted testi su @batch.Items.Count.</p>
+        @if (batch.Items.Any(item => item.Error is not null))
+        {
+            <ul class="list-group">
+                @foreach (var item in batch.Items.Where(item => item.Error is not null))
+                {
+                    <li class="list-group-item list-group-item-warning">Elemento @(item.Index + 1): @item.Error</li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+@if (error is not null)
+{
+    <p role="alert" class="alert alert-danger mt-3">@error</p>
+}
+
+@code {
+    private string text = "";
+    private bool busy;
+    private string? error;
+    private TextDto? saved;
+    private BatchResponse? batch;
+
+    private async Task AddTextAsync()
+    {
+        busy = true;
+        error = null;
+        saved = null;
+        try
+        {
+            saved = await Client.AddAsync(text);
+            text = "";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task UploadAsync(InputFileChangeEventArgs args)
+    {
+        busy = true;
+        error = null;
+        batch = null;
+        try
+        {
+            await using var stream = args.File.OpenReadStream(1_048_576);
+            using var reader = new StreamReader(stream);
+            batch = await Client.AddBatchJsonAsync(await reader.ReadToEndAsync());
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or System.Text.Json.JsonException or ArgumentException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

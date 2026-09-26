@@ -1,0 +1,17 @@
+name: db-semantic-search
+infra:
+  provider: bicep
+  path: infra
+services:
+  api:
+    project: ./src/DBSemanticSearch.Api
+    language: dotnet
+    host: function
+  web:
+    project: ./src/DBSemanticSearch.Web
+    language: dotnet
+    host: staticwebapp
+    dist: bin/Release/net10.0/publish/wwwroot
+    hooks:
+      prepackage:
+        run: dotnet publish -c Release
