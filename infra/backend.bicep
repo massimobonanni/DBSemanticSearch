@@ -2,8 +2,6 @@ param location string
 @minLength(6)
 param token string
 param tags object
-@secure()
-param postgresPassword string
 param databaseHost string
 param databaseName string
 param foundryName string
@@ -16,7 +14,6 @@ param applicationInsightsConnectionString string
 
 var functionName = 'func-${token}'
 var storageName = 'st${token}'
-var adminUser = 'semanticadmin'
 var containerName = 'function-packages'
 
 resource foundry 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
@@ -104,8 +101,8 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
     DB_HOST: databaseHost
     DB_NAME: databaseName
-    DB_USER: adminUser
-    DB_PASSWORD: postgresPassword
+    DB_USER: functionName
+    DB_AUTH_MODE: 'ManagedIdentity'
     EMBEDDING_ENDPOINT: foundryEndpoint
     EMBEDDING_DEPLOYMENT: embeddingDeploymentName
     EMBEDDING_DIMENSIONS: string(embeddingDimensions)

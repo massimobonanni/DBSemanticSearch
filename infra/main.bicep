@@ -5,8 +5,14 @@ param environmentName string
 @metadata({ azd: { type: 'location' } })
 param location string
 
-@secure()
-param postgresPassword string
+param postgresEntraAdminObjectId string
+param postgresEntraAdminName string
+@allowed([
+  'Group'
+  'ServicePrincipal'
+  'User'
+])
+param postgresEntraAdminPrincipalType string
 
 var token = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = {
@@ -69,7 +75,9 @@ module database 'database.bicep' = {
     location: location
     token: token
     tags: tags
-    postgresPassword: postgresPassword
+    entraAdminObjectId: postgresEntraAdminObjectId
+    entraAdminName: postgresEntraAdminName
+    entraAdminPrincipalType: postgresEntraAdminPrincipalType
   }
 }
 
@@ -90,7 +98,6 @@ module backend 'backend.bicep' = {
     location: location
     token: token
     tags: tags
-    postgresPassword: postgresPassword
     databaseHost: database.outputs.host
     databaseName: database.outputs.name
     foundryName: foundry.outputs.name
@@ -114,6 +121,9 @@ module frontend 'frontend.bicep' = {
 
 output AZURE_RESOURCE_GROUP string = group.name
 output AZURE_FUNCTION_NAME string = backend.outputs.functionName
+output AZURE_FUNCTION_PRINCIPAL_ID string = backend.outputs.principalId
+output AZURE_POSTGRES_HOST string = database.outputs.host
+output AZURE_POSTGRES_SERVER_NAME string = database.outputs.serverName
 output AZURE_FOUNDRY_ENDPOINT string = foundry.outputs.endpoint
 output AZURE_FOUNDRY_EMBEDDING_DEPLOYMENT string = foundry.outputs.embeddingDeploymentName
 output AZURE_FOUNDRY_LARGE_EMBEDDING_DEPLOYMENT string = foundry.outputs.largeEmbeddingDeploymentName

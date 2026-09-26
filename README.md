@@ -40,7 +40,7 @@ I problemi di formato/validazione restituiscono `400` e `{ "error": "..." }`; ri
 
 Sono necessari .NET SDK 10, Azure Functions Core Tools v4, PostgreSQL con pgvector, Azurite per lo storage locale, Azure CLI e un deployment di `text-embedding-3-small` in Microsoft Foundry. L'utente locale di PostgreSQL deve poter eseguire `CREATE EXTENSION vector` e creare tabelle; crea prima il database `semantic_search`. Accedi ad Azure con `az login` e assegna al tuo utente il ruolo **Cognitive Services OpenAI User** sulla risorsa del modello. Non inserire segreti nei file versionati.
 
-1. Copia `src/DBSemanticSearch.Api/local.settings.example.json` in `src/DBSemanticSearch.Api/local.settings.json` e configura la stringa PostgreSQL, l'endpoint HTTPS OpenAI e il nome del deployment. `EMBEDDING_DIMENSIONS` deve corrispondere alla dimensione reale degli embedding (1536 per il deployment predefinito) e rimane fisso per la tabella esistente. In alternativa alla stringa, l'API accetta `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` da variabili d'ambiente e richiede TLS con verifica dell'host.
+1. Copia `src/DBSemanticSearch.Api/local.settings.example.json` in `src/DBSemanticSearch.Api/local.settings.json` e configura la stringa PostgreSQL, l'endpoint HTTPS OpenAI e il nome del deployment. `EMBEDDING_DIMENSIONS` deve corrispondere alla dimensione reale degli embedding (1536 per il deployment predefinito) e rimane fisso per la tabella esistente. In alternativa alla stringa, l'API accetta `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_AUTH_MODE` e, soltanto in modalità `Password`, `DB_PASSWORD`. `DefaultAzureCredential` permette di usare l'identità di `az login` in locale; tutte le connessioni separate richiedono TLS con verifica dell'host.
 2. Avvia PostgreSQL e Azurite; avvia l'API dalla sua cartella con `func start --cors http://localhost:5207`.
 3. Da un'altra shell esegui `dotnet run --project src\DBSemanticSearch.Web --launch-profile http`, poi apri `http://localhost:5207`. La configurazione di sviluppo punta a `http://localhost:7071`; in produzione il frontend usa `/api` sullo stesso host.
 4. Per eseguire i test: `dotnet test DBSemanticSearch.sln`. L'API crea l'estensione e la tabella alla prima richiesta, verificando che la dimensione della colonna corrisponda al modello configurato.
@@ -55,13 +55,30 @@ Il modulo Foundry crea due deployment `GlobalStandard` (capacità predefinita 10
 azd auth login
 azd env new dev
 azd env set AZURE_LOCATION swedencentral
-azd env set AZURE_POSTGRES_PASSWORD "UNA_PASSWORD_FORTE_GENERATA_DA_TE"
+$account = az ad signed-in-user show | ConvertFrom-Json
+azd env set AZURE_POSTGRES_ENTRA_ADMIN_OBJECT_ID $account.id
+azd env set AZURE_POSTGRES_ENTRA_ADMIN_NAME $account.userPrincipalName
+azd env set AZURE_POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE User
 azd up
 ```
 
-Scegli una regione compatibile con il modello e una password robusta; i valori AZD sono memorizzati localmente in `.azure/` (esclusa da Git). La password del database è un parametro Bicep sicuro e viene usata nelle impostazioni della Function, non negli output di provisioning. La prima distribuzione può richiedere alcuni minuti per propagare le assegnazioni di ruolo. La configurazione pubblica del server PostgreSQL consente connessioni da servizi Azure (`0.0.0.0`): per ambienti esposti o regolamentati è necessario sostituirla con un'architettura di rete privata. **L'API è anonima e può generare costi Foundry a ogni richiesta**: usare questo esempio soltanto in un ambiente in cui accesso e consumi siano controllati a livello di rete/deployment.
+Il server usa esclusivamente Microsoft Entra ID: non viene creata alcuna password PostgreSQL. Dopo il primo `azd up`, registra una sola volta la managed identity della Function come principal PostgreSQL. Sono necessari `psql` e una sessione `az login` dell'amministratore configurato sopra:
 
-Non vengono configurate credenziali Foundry nell'app: l'API usa `EMBEDDING_AUTH_MODE=ManagedIdentity` e la propria identità gestita system-assigned. I secret locali restano fuori dal repository.
+```powershell
+$postgresHost = azd env get-value AZURE_POSTGRES_HOST
+$functionName = azd env get-value AZURE_FUNCTION_NAME
+$functionPrincipalId = azd env get-value AZURE_FUNCTION_PRINCIPAL_ID
+$entraAdmin = azd env get-value AZURE_POSTGRES_ENTRA_ADMIN_NAME
+$env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
+
+psql "host=$postgresHost dbname=postgres user=$entraAdmin sslmode=require" -c "SELECT pg_catalog.pgaadauth_create_principal_with_oid('$functionName', '$functionPrincipalId', 'service', false, false) WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$functionName');"
+psql "host=$postgresHost dbname=semantic_search user=$entraAdmin sslmode=require" -c ('CREATE EXTENSION IF NOT EXISTS vector; GRANT USAGE, CREATE ON SCHEMA public TO "' + $functionName + '";')
+Remove-Item Env:PGPASSWORD
+```
+
+Scegli una regione compatibile con il modello. I valori AZD sono memorizzati localmente in `.azure/` (esclusa da Git). Se il deploy viene eseguito da un service principal o vuoi usare un gruppo come amministratore, imposta i tre valori `AZURE_POSTGRES_ENTRA_ADMIN_*` con nome, object ID e tipo corrispondenti. La prima distribuzione può richiedere alcuni minuti per propagare identità e assegnazioni. La configurazione pubblica del server PostgreSQL consente connessioni da servizi Azure (`0.0.0.0`): per ambienti esposti o regolamentati è necessario sostituirla con un'architettura di rete privata. **L'API è anonima e può generare costi Foundry a ogni richiesta**: usare questo esempio soltanto in un ambiente in cui accesso e consumi siano controllati a livello di rete/deployment.
+
+Non vengono configurate credenziali PostgreSQL o Foundry nell'app: l'API usa `DB_AUTH_MODE=ManagedIdentity`, `EMBEDDING_AUTH_MODE=ManagedIdentity` e la propria identità gestita system-assigned. I secret locali restano fuori dal repository.
 
 ### Autenticazione verso Foundry
 
