@@ -104,11 +104,11 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     DB_HOST: databaseHost
     DB_NAME: databaseName
     DB_USER: functionName
-    DB_AUTH_MODE: 'ManagedIdentity'
+    DB_AUTH_MODE: 'DefaultAzureCredential'
     EMBEDDING_ENDPOINT: foundryEndpoint
     EMBEDDING_DEPLOYMENT: embeddingDeploymentName
     EMBEDDING_DIMENSIONS: string(embeddingDimensions)
-    EMBEDDING_AUTH_MODE: 'ManagedIdentity'
+    EMBEDDING_AUTH_MODE: 'DefaultAzureCredential'
   }
   // Inference calls fail until the role assignment on Foundry exists.
   dependsOn: [modelRole]
