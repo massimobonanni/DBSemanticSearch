@@ -77,6 +77,7 @@ module frontend 'frontend.bicep' = {
     tags: tags
     functionAppName: backend.outputs.functionName
     webAppName: webAppName
+    applicationInsightsConnectionString: monitor.outputs.connectionString
   }
 }
 

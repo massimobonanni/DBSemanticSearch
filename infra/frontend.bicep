@@ -4,6 +4,7 @@ param token string
 param tags object
 param functionAppName string
 param webAppName string
+param applicationInsightsConnectionString string
 
 var abbreviations = loadJsonContent('./abbreviations.json')
 var planName = '${abbreviations.webServerFarms}web-${token}'
@@ -49,6 +50,10 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     WEBSITE_RUN_FROM_PACKAGE: '1'
     ApiBaseUrl: 'https://${functionApp.properties.defaultHostName}/'
     FunctionKey: functionHostKey
+    APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
+    ApplicationInsightsAgent_EXTENSION_VERSION: '~2'
+    XDT_MicrosoftApplicationInsights_Mode: 'recommended'
+    XDT_MicrosoftApplicationInsights_PreemptSdk: '1'
   }
 }
 
