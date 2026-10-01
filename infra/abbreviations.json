@@ -1,6 +1,6 @@
 {
-    "aiFoundryAccounts": "aif",
-    "analysisServicesServers": "as",
+    "aiFoundryAccounts": "aif-",
+    "analysisServicesServers": "as-",
     "apiManagementService": "apim-",
     "appConfigurationStores": "appcs-",
     "appManagedEnvironments": "cae-",

@@ -5,7 +5,7 @@ param tags object
 
 var abbreviations = loadJsonContent('./abbreviations.json')
 var workspaceName = '${abbreviations.operationalInsightsWorkspaces}${token}'
-var insightsName = '${abbreviations.insightsComponents}-${token}'
+var insightsName = '${abbreviations.insightsComponents}${token}'
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: workspaceName

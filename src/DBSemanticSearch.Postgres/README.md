@@ -73,7 +73,7 @@ All configurations built from separate variables use `SslMode=VerifyFull`.
 - **`DefaultAzureCredential`** uses the Azure credential chain and is useful during development with `az login`.
 - **`ManagedIdentity`** uses only the host's managed identity. Npgsql requires a token for the `https://ossrdbms-aad.database.windows.net/.default` scope and refreshes it periodically without putting it in the connection string.
 
-The deployment in [`infra`](../../infra) configures PostgreSQL in Microsoft Entra-only mode and sets `DB_AUTH_MODE=ManagedIdentity` on the Function App. The identity must be registered once as a PostgreSQL role with `pgaadauth_create_principal_with_oid`; the complete procedure is in the [main README](../../README.md#azure-deployment).
+The deployment in [`infra`](../../infra) configures PostgreSQL in Microsoft Entra-only mode and sets `DB_AUTH_MODE=ManagedIdentity` on the Function App. The identity is registered as a PostgreSQL role with `pgaadauth_create_principal_with_oid` by the `postprovision` hook; see the [main README](../../README.md#azure-deployment).
 
 ## Database permissions
 

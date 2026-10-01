@@ -2,23 +2,17 @@ name: db-semantic-search
 infra:
   provider: bicep
   path: infra
-workflows:
-  up:
-    steps:
-      - azd: provision
-      - azd: package
-      - azd: deploy --all
 hooks:
   postprovision:
     windows:
       shell: pwsh
       run: ./scripts/azd/configure-postgres-entra-admin.ps1
-      interactive: false
+      interactive: true
       continueOnError: false
     posix:
       shell: sh
       run: sh ./scripts/azd/configure-postgres-entra-admin.sh
-      interactive: false
+      interactive: true
       continueOnError: false
 services:
   api:
