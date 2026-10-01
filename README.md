@@ -67,7 +67,16 @@ azd env set AZURE_POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE User
 azd up
 ```
 
-The server uses Microsoft Entra ID exclusively: no PostgreSQL password is created. The `postprovision` hook waits for the server to be ready, configures the Entra administrator with a separate, repeatable Bicep deployment, and registers the Function identity as a PostgreSQL principal (`pgaadauth_create_principal_with_oid`, plus `USAGE, CREATE` on schema `public` of `semantic_search`). During registration it adds a temporary firewall rule for this machine's public IP and removes it at the end. It requires an authenticated Azure CLI (`az login`) as the administrator configured above, `psql` in `PATH` (e.g. `winget install PostgreSQL.PostgreSQL`), and deployment permission on the resource group.
+The server uses Microsoft Entra ID exclusively: no PostgreSQL password is created. The `postprovision` hook waits for the server to be ready, configures the Entra administrator with a separate, repeatable Bicep deployment, and registers the Function identity as a PostgreSQL principal (`pgaadauth_create_principal_with_oid`, plus `USAGE, CREATE` on schema `public` of `semantic_search`). During registration it adds a temporary firewall rule for this machine's public IP and removes it at the end. It requires an authenticated Azure CLI (`az login`) as the administrator configured above, `psql` in `PATH`, and deployment permission on the resource group.
+
+On Windows, if `azd up` fails with `psql is required to register the Function identity in PostgreSQL`, install PostgreSQL 16 (matching the Azure Flexible Server version configured in `infra/database.bicep`) and check that `psql` is available in a new PowerShell terminal:
+
+```powershell
+winget install --id PostgreSQL.PostgreSQL.16 --exact
+psql --version
+```
+
+If `psql` is still not recognized, add `C:\Program Files\PostgreSQL\<version>\bin` to `PATH` and reopen the terminal. Then rerun `azd up` in the same AZD environment to complete the skipped `api` and `web` deployments.
 
 Choose a region compatible with the model. AZD values are stored locally in `.azure/` (excluded from Git). If deployment is performed by a service principal or you want to use a group as administrator, set the three `AZURE_POSTGRES_ENTRA_ADMIN_*` values with the corresponding name, object ID, and type. The first deployment may take several minutes while identities and role assignments propagate. The public PostgreSQL server configuration allows connections from Azure services (`0.0.0.0`): for exposed or regulated environments, replace it with a private networking architecture. **The function key stays on the server, but it does not authenticate users or make the Functions API private.** If the previous WebAssembly version published the key, rotate it after migration while coordinating any other consumers; the host key configured here authorizes all HTTP Functions in the app. Dedicated measures, such as Microsoft Entra/App Service Authentication or Azure API Management, are required to control user access or limit API exposure.
 
