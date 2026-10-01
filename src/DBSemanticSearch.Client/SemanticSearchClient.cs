@@ -44,14 +44,14 @@ public sealed class SemanticSearchClient(HttpClient httpClient)
             catch (JsonException ex)
             {
                 throw new HttpRequestException(
-                    $"Errore HTTP {(int)response.StatusCode}: risposta del servizio non valida.",
+                    $"HTTP error {(int)response.StatusCode}: invalid service response.",
                     ex, response.StatusCode);
             }
-            throw new HttpRequestException(error?.Error ?? $"Errore HTTP {(int)response.StatusCode}.",
+            throw new HttpRequestException(error?.Error ?? $"HTTP error {(int)response.StatusCode}.",
                 null, response.StatusCode);
         }
 
         return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
-            ?? throw new JsonException("La risposta del servizio è vuota.");
+            ?? throw new JsonException("The service response is empty.");
     }
 }

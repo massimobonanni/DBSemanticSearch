@@ -53,7 +53,7 @@ public sealed class BatchProcessorTests
     {
         public Task<float[]> GenerateAsync(string text, CancellationToken cancellationToken) =>
             text == "fallisce"
-                ? throw new InvalidOperationException("Errore modello")
+                ? throw new InvalidOperationException("Model error")
                 : Task.FromResult(new float[] { 1, 2 });
     }
 

@@ -24,7 +24,7 @@ public sealed class PostgresTextRepository(NpgsqlDataSource dataSource, int dime
         command.Parameters.AddWithValue("text", text);
         command.Parameters.Add("embedding", NpgsqlDbType.Text).Value = vector;
         var createdAt = (DateTime)(await command.ExecuteScalarAsync(cancellationToken)
-            ?? throw new InvalidOperationException("Il database non ha restituito la data di creazione."));
+            ?? throw new InvalidOperationException("The database did not return a creation timestamp."));
         return new(id, text, new DateTimeOffset(createdAt, TimeSpan.Zero));
     }
 
@@ -56,7 +56,7 @@ public sealed class PostgresTextRepository(NpgsqlDataSource dataSource, int dime
     private string FormatVector(float[] embedding)
     {
         if (embedding.Length != dimensions || embedding.Any(value => !float.IsFinite(value)))
-            throw new InvalidOperationException("Le dimensioni o i valori dell'embedding non sono validi.");
+            throw new InvalidOperationException("The embedding dimensions or values are invalid.");
 
         return $"[{string.Join(",", embedding.Select(value => value.ToString("R", CultureInfo.InvariantCulture)))}]";
     }
@@ -89,7 +89,7 @@ public sealed class PostgresTextRepository(NpgsqlDataSource dataSource, int dime
             var type = (string?)await check.ExecuteScalarAsync(cancellationToken);
             if (type != $"vector({dimensions})")
                 throw new InvalidOperationException(
-                    $"La colonna embedding è {type}, ma il modello configurato richiede vector({dimensions}).");
+                    $"The embedding column is {type}, but the configured model requires vector({dimensions}).");
             _schemaReady = true;
         }
         finally

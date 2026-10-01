@@ -8,12 +8,13 @@ param foundryName string
 param foundryEndpoint string
 param embeddingDeploymentName string
 @minValue(1)
-@maxValue(2000)
+@maxValue(3072)
 param embeddingDimensions int
 param applicationInsightsConnectionString string
 
-var functionName = 'func-${token}'
-var storageName = 'st${token}'
+var abbreviations = loadJsonContent('./abbreviations.json')
+var functionName = '${abbreviations.webSitesFunctions}${token}'
+var storageName = '${abbreviations.storageStorageAccounts}${token}'
 var containerName = 'function-packages'
 
 resource foundry 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
@@ -46,7 +47,7 @@ resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/con
 }
 
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
-  name: 'plan-${token}'
+  name: '${abbreviations.webServerFarms}${token}'
   location: location
   tags: tags
   kind: 'functionapp'
@@ -68,7 +69,9 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
-    siteConfig: { minTlsVersion: '1.2' }
+    siteConfig: {
+      minTlsVersion: '1.2'
+    }
     functionAppConfig: {
       deployment: {
         storage: {
@@ -96,7 +99,6 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
   properties: {
     AzureWebJobsStorage__accountName: storage.name
     AzureWebJobsStorage__credential: 'managedidentity'
-    FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated'
     FUNCTIONS_EXTENSION_VERSION: '~4'
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
     DB_HOST: databaseHost
@@ -154,5 +156,6 @@ resource modelRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 output functionName string = functionApp.name
+output functionUrl string = 'https://${functionApp.properties.defaultHostName}'
 output functionId string = functionApp.id
 output principalId string = functionApp.identity.principalId

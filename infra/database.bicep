@@ -2,16 +2,9 @@ param location string
 @minLength(6)
 param token string
 param tags object
-param entraAdminObjectId string
-param entraAdminName string
-@allowed([
-  'Group'
-  'ServicePrincipal'
-  'User'
-])
-param entraAdminPrincipalType string
 
-var postgresName = 'psql-${token}'
+var abbreviations = loadJsonContent('./abbreviations.json')
+var postgresName = '${abbreviations.dBforPostgreSQLServers}${token}'
 var databaseName = 'semantic_search'
 
 resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
@@ -32,16 +25,6 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     storage: { storageSizeGB: 32 }
     backup: { backupRetentionDays: 7 }
     network: { publicNetworkAccess: 'Enabled' }
-  }
-}
-
-resource entraAdministrator 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
-  parent: postgres
-  name: entraAdminObjectId
-  properties: {
-    principalName: entraAdminName
-    principalType: entraAdminPrincipalType
-    tenantId: tenant().tenantId
   }
 }
 

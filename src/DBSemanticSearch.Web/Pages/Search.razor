@@ -1,12 +1,12 @@
 @page "/search"
 @inject SemanticSearchClient Client
 
-<PageTitle>Ricerca semantica</PageTitle>
-<h1>Ricerca semantica</h1>
-<p>Inserisci una frase: vengono restituiti i cinque testi semanticamente più vicini.</p>
-<label for="query" class="form-label">Testo da cercare</label>
+<PageTitle>Semantic search</PageTitle>
+<h1>Semantic search</h1>
+<p>Enter a phrase to find the five most semantically similar texts.</p>
+<label for="query" class="form-label">Search text</label>
 <textarea id="query" class="form-control mb-3" rows="3" maxlength="10000" @bind="query"></textarea>
-<button type="button" class="btn btn-primary" disabled="@busy" @onclick="SearchAsync">Cerca</button>
+<button type="button" class="btn btn-primary" disabled="@busy" @onclick="SearchAsync">Search</button>
 
 @if (error is not null)
 {
@@ -14,10 +14,10 @@
 }
 @if (results is not null)
 {
-    <h2 class="mt-4">Risultati</h2>
+    <h2 class="mt-4">Results</h2>
     @if (results.Count == 0)
     {
-        <p role="status">Non ci sono testi nella banca dati.</p>
+        <p role="status">There are no texts in the database.</p>
     }
     else
     {
@@ -26,7 +26,7 @@
             {
                 <li class="list-group-item">
                     <span class="document-text">@hit.Document.Text</span>
-                    <small class="d-block text-muted">Distanza coseno: @hit.Distance.ToString("F4")</small>
+                    <small class="d-block text-muted">Cosine distance: @hit.Distance.ToString("F4")</small>
                 </li>
             }
         </ol>

@@ -21,12 +21,12 @@ public sealed class FoundryEmbeddingService : IEmbeddingService
     {
         FoundryAuthenticationMode.ApiKey => new AzureOpenAIClient(settings.Endpoint,
             new ApiKeyCredential(settings.ApiKey
-                ?? throw new InvalidOperationException("La chiave API di Foundry non è configurata."))),
+                ?? throw new InvalidOperationException("The Foundry API key is not configured."))),
         FoundryAuthenticationMode.ManagedIdentity => new AzureOpenAIClient(settings.Endpoint,
             CreateManagedIdentityCredential(settings.ManagedIdentityClientId)),
         FoundryAuthenticationMode.DefaultAzureCredential => new AzureOpenAIClient(settings.Endpoint,
             new DefaultAzureCredential()),
-        _ => throw new InvalidOperationException($"Modalità di autenticazione non supportata: {settings.AuthenticationMode}.")
+        _ => throw new InvalidOperationException($"Unsupported authentication mode: {settings.AuthenticationMode}.")
     };
 
     private static TokenCredential CreateManagedIdentityCredential(string? clientId) =>
@@ -39,7 +39,7 @@ public sealed class FoundryEmbeddingService : IEmbeddingService
         var result = await _client.GenerateEmbeddingAsync(text, cancellationToken: cancellationToken);
         var vector = result.Value.ToFloats().ToArray();
         if (vector.Length != _dimensions || vector.Any(value => !float.IsFinite(value)))
-            throw new InvalidOperationException("L'embedding restituito non corrisponde alle dimensioni configurate o contiene valori non validi.");
+            throw new InvalidOperationException("The returned embedding does not match the configured dimensions or contains invalid values.");
         return vector;
     }
 }

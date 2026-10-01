@@ -1,19 +1,30 @@
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using DBSemanticSearch.Client;
 using DBSemanticSearch.Web;
 
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
-builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
-builder.Services.AddScoped(_ => new HttpClient
+if (!Uri.TryCreate(builder.Configuration["ApiBaseUrl"], UriKind.Absolute, out var apiBaseUri)
+    || apiBaseUri.Scheme is not ("http" or "https"))
+    throw new InvalidOperationException("ApiBaseUrl must be an absolute HTTP(S) URL.");
+
+var functionKey = builder.Configuration["FunctionKey"];
+if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(functionKey))
+    throw new InvalidOperationException("FunctionKey must be configured outside Development.");
+
+builder.Services.AddHttpClient<SemanticSearchClient>(client =>
 {
-    BaseAddress = string.IsNullOrWhiteSpace(apiBaseUrl)
-        ? new Uri(builder.HostEnvironment.BaseAddress)
-        : new Uri(apiBaseUrl, UriKind.Absolute)
-});
-builder.Services.AddScoped<SemanticSearchClient>();
+    client.BaseAddress = apiBaseUri;
 
-await builder.Build().RunAsync();
+    if (!string.IsNullOrWhiteSpace(functionKey))
+        client.DefaultRequestHeaders.Add("x-functions-key", functionKey);
+});
+
+var app = builder.Build();
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseAntiforgery();
+app.MapStaticAssets();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.Run();

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/db-semantic-search/text-batch.schema.json",
-  "title": "Batch di testi",
-  "description": "Formato di caricamento dei testi; ogni elemento non valido viene segnalato senza interrompere gli altri.",
+  "title": "Text batch",
+  "description": "Text upload format; each invalid item is reported without interrupting the others.",
   "type": "object",
   "required": ["texts"],
   "properties": {

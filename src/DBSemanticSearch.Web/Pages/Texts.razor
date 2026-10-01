@@ -1,34 +1,34 @@
 @page "/texts"
 @inject SemanticSearchClient Client
 
-<PageTitle>Aggiungi testi</PageTitle>
-<h1>Aggiungi testi</h1>
+<PageTitle>Add texts</PageTitle>
+<h1>Add texts</h1>
 
 <section class="mb-5">
-    <h2>Testo singolo</h2>
-    <label for="new-text" class="form-label">Testo da vettorizzare</label>
+    <h2>Single text</h2>
+    <label for="new-text" class="form-label">Text to vectorize</label>
     <textarea id="new-text" class="form-control mb-3" rows="5" maxlength="10000" @bind="text"></textarea>
-    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="AddTextAsync">Salva testo</button>
+    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="AddTextAsync">Save text</button>
     @if (saved is not null)
     {
-        <p role="status" class="alert alert-success mt-3">Testo salvato: @saved.Id</p>
+        <p role="status" class="alert alert-success mt-3">Text saved: @saved.Id</p>
     }
 </section>
 
 <section>
-    <h2>Carica un file JSON</h2>
-    <p>Formato: <code>{"texts":["Primo testo","Secondo testo"]}</code> (massimo 100 elementi, file fino a 1 MiB).
-        Ogni elemento valido viene salvato anche se altri elementi falliscono.</p>
+    <h2>Upload a JSON file</h2>
+    <p>Format: <code>{"texts":["First text","Second text"]}</code> (up to 100 items, file size up to 1 MiB).
+        Each valid item is saved even if other items fail.</p>
     <InputFile OnChange="UploadAsync" accept=".json,application/json" disabled="@busy" />
     @if (batch is not null)
     {
-        <p role="status" class="alert alert-info mt-3">Salvati @batch.Inserted testi su @batch.Items.Count.</p>
+        <p role="status" class="alert alert-info mt-3">Saved @batch.Inserted of @batch.Items.Count texts.</p>
         @if (batch.Items.Any(item => item.Error is not null))
         {
             <ul class="list-group">
                 @foreach (var item in batch.Items.Where(item => item.Error is not null))
                 {
-                    <li class="list-group-item list-group-item-warning">Elemento @(item.Index + 1): @item.Error</li>
+                    <li class="list-group-item list-group-item-warning">Item @(item.Index + 1): @item.Error</li>
                 }
             </ul>
         }

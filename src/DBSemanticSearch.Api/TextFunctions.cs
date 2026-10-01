@@ -16,7 +16,7 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
 
     [Function("AddText")]
     public async Task<HttpResponseData> AddText(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "texts")] HttpRequestData request)
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "texts")] HttpRequestData request)
     {
         var cancellationToken = request.FunctionContext.CancellationToken;
         try
@@ -37,13 +37,13 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         catch (RequestTooLargeException)
         {
             return await RespondAsync(request, HttpStatusCode.RequestEntityTooLarge,
-                new ErrorResponse("La richiesta supera 1 MiB."), cancellationToken);
+                new ErrorResponse("The request exceeds 1 MiB."), cancellationToken);
         }
     }
 
     [Function("AddBatch")]
     public async Task<HttpResponseData> AddBatch(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "texts/batch")] HttpRequestData request)
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "texts/batch")] HttpRequestData request)
     {
         var cancellationToken = request.FunctionContext.CancellationToken;
         try
@@ -51,7 +51,7 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
             using var json = await ReadJsonAsync(request, cancellationToken);
             if (json.RootElement.ValueKind != JsonValueKind.Object
                 || !json.RootElement.TryGetProperty("texts", out var entries))
-                throw new ArgumentException("È richiesto un oggetto JSON con l'array 'texts'.");
+                throw new ArgumentException("A JSON object with a 'texts' array is required.");
             var batch = await BatchProcessor.ProcessAsync(entries, texts, logger, cancellationToken);
             return await RespondAsync(request, HttpStatusCode.OK, batch, cancellationToken);
         }
@@ -66,13 +66,13 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         catch (RequestTooLargeException)
         {
             return await RespondAsync(request, HttpStatusCode.RequestEntityTooLarge,
-                new ErrorResponse("La richiesta supera 1 MiB."), cancellationToken);
+                new ErrorResponse("The request exceeds 1 MiB."), cancellationToken);
         }
     }
 
     [Function("SearchTexts")]
     public async Task<HttpResponseData> Search(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "search")] HttpRequestData request)
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "search")] HttpRequestData request)
     {
         var cancellationToken = request.FunctionContext.CancellationToken;
         try
@@ -93,7 +93,7 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         catch (RequestTooLargeException)
         {
             return await RespondAsync(request, HttpStatusCode.RequestEntityTooLarge,
-                new ErrorResponse("La richiesta supera 1 MiB."), cancellationToken);
+                new ErrorResponse("The request exceeds 1 MiB."), cancellationToken);
         }
     }
 
@@ -101,7 +101,7 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
     {
         if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("text", out var value)
             || value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
-            throw new ArgumentException("È richiesto un oggetto JSON con la proprietà stringa 'text'.");
+            throw new ArgumentException("A JSON object with a 'text' string property is required.");
         return value.GetString();
     }
 

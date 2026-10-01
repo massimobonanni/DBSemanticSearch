@@ -1,6 +1,6 @@
 # DBSemanticSearch.Foundry
 
-Adapter that generates text embeddings with an Azure OpenAI deployment hosted in Microsoft Foundry (by default `text-embedding-3-small`).
+Adapter that generates text embeddings with an Azure OpenAI deployment hosted in Microsoft Foundry (by default `text-embedding-3-large`).
 
 ## Purpose
 
@@ -27,8 +27,8 @@ Dependencies:
 | Variable | Required | Description |
 | --- | --- | --- |
 | `EMBEDDING_ENDPOINT` | Yes | HTTPS endpoint of the resource, e.g. `https://<resource>.openai.azure.com/` |
-| `EMBEDDING_DEPLOYMENT` | Yes | Name of the embedding model deployment, e.g. `text-embedding-3-small` |
-| `EMBEDDING_DIMENSIONS` | Yes | Vector size, 1–2000 (`1536` for `text-embedding-3-small`). It must match the `vector(n)` column in PostgreSQL. |
+| `EMBEDDING_DEPLOYMENT` | Yes | Name of the embedding model deployment, e.g. `text-embedding-3-large` |
+| `EMBEDDING_DIMENSIONS` | Yes | Vector size, 1–3072 (`3072` for `text-embedding-3-large`). It must match the `vector(n)` column in PostgreSQL. |
 | `EMBEDDING_AUTH_MODE` | No | `DefaultAzureCredential` (default), `ManagedIdentity` or `ApiKey`, case-insensitive |
 | `EMBEDDING_API_KEY` | Only with `ApiKey` | Resource key |
 | `EMBEDDING_MANAGED_IDENTITY_CLIENT_ID` | No | Client ID of a user-assigned managed identity. If omitted, the system-assigned identity is used. |
@@ -47,8 +47,8 @@ For both Entra ID modes the identity needs the **Cognitive Services OpenAI User*
 {
   "Values": {
     "EMBEDDING_ENDPOINT": "https://my-resource.openai.azure.com/",
-    "EMBEDDING_DEPLOYMENT": "text-embedding-3-small",
-    "EMBEDDING_DIMENSIONS": "1536",
+    "EMBEDDING_DEPLOYMENT": "text-embedding-3-large",
+    "EMBEDDING_DIMENSIONS": "3072",
     "EMBEDDING_AUTH_MODE": "DefaultAzureCredential"
   }
 }

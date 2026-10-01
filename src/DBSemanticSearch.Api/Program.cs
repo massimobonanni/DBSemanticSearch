@@ -31,7 +31,7 @@ static NpgsqlDataSource CreatePostgresDataSource()
     var host = Environment.GetEnvironmentVariable("DB_HOST");
     var user = Environment.GetEnvironmentVariable("DB_USER");
     if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(user))
-        throw new InvalidOperationException("Configurare DB_CONNECTION_STRING o DB_HOST e DB_USER.");
+        throw new InvalidOperationException("Configure DB_CONNECTION_STRING or both DB_HOST and DB_USER.");
 
     var authMode = Environment.GetEnvironmentVariable("DB_AUTH_MODE") ?? "Password";
     var connectionStringBuilder = new NpgsqlConnectionStringBuilder
@@ -45,7 +45,7 @@ static NpgsqlDataSource CreatePostgresDataSource()
     if (authMode.Equals("Password", StringComparison.OrdinalIgnoreCase))
     {
         connectionStringBuilder.Password = Environment.GetEnvironmentVariable("DB_PASSWORD")
-            ?? throw new InvalidOperationException("DB_PASSWORD è obbligatoria quando DB_AUTH_MODE è Password.");
+            ?? throw new InvalidOperationException("DB_PASSWORD is required when DB_AUTH_MODE is Password.");
         return NpgsqlDataSource.Create(connectionStringBuilder.ConnectionString);
     }
 
@@ -54,7 +54,7 @@ static NpgsqlDataSource CreatePostgresDataSource()
         "managedidentity" => CreateManagedIdentityCredential(),
         "defaultazurecredential" => new DefaultAzureCredential(),
         _ => throw new InvalidOperationException(
-            "DB_AUTH_MODE deve essere Password, DefaultAzureCredential o ManagedIdentity.")
+            "DB_AUTH_MODE must be Password, DefaultAzureCredential, or ManagedIdentity.")
     };
 
     var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString);

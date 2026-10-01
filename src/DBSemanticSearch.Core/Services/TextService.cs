@@ -25,10 +25,10 @@ public sealed class TextService(ITextRepository repository, IEmbeddingService em
     public static string Validate(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
-            throw new ArgumentException("Il testo non può essere vuoto.");
+            throw new ArgumentException("Text cannot be empty.");
 
         if (text.Length > MaxTextLength)
-            throw new ArgumentException($"Il testo non può superare {MaxTextLength} caratteri.");
+            throw new ArgumentException($"Text cannot exceed {MaxTextLength} characters.");
 
         return text.Trim();
     }

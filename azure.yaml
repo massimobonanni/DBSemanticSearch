@@ -2,6 +2,24 @@ name: db-semantic-search
 infra:
   provider: bicep
   path: infra
+workflows:
+  up:
+    steps:
+      - azd: provision
+      - azd: package
+      - azd: deploy --all
+hooks:
+  postprovision:
+    windows:
+      shell: pwsh
+      run: ./scripts/azd/configure-postgres-entra-admin.ps1
+      interactive: false
+      continueOnError: false
+    posix:
+      shell: sh
+      run: sh ./scripts/azd/configure-postgres-entra-admin.sh
+      interactive: false
+      continueOnError: false
 services:
   api:
     project: ./src/DBSemanticSearch.Api
@@ -10,8 +28,4 @@ services:
   web:
     project: ./src/DBSemanticSearch.Web
     language: dotnet
-    host: staticwebapp
-    dist: bin/Release/net10.0/publish/wwwroot
-    hooks:
-      prepackage:
-        run: dotnet publish -c Release
+    host: appservice

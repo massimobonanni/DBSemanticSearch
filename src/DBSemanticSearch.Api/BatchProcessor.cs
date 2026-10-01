@@ -11,7 +11,7 @@ internal static class BatchProcessor
         JsonElement entries, TextService texts, ILogger logger, CancellationToken cancellationToken)
     {
         if (entries.ValueKind != JsonValueKind.Array || entries.GetArrayLength() is < 1 or > 100)
-            throw new ArgumentException("L'array 'texts' deve contenere da 1 a 100 elementi.");
+            throw new ArgumentException("The 'texts' array must contain between 1 and 100 items.");
 
         var results = new List<BatchItemResult>();
         var index = 0;
@@ -19,7 +19,7 @@ internal static class BatchProcessor
         {
             if (entry.ValueKind != JsonValueKind.String)
             {
-                results.Add(new(index++, null, "L'elemento deve essere una stringa."));
+                results.Add(new(index++, null, "The item must be a string."));
                 continue;
             }
 
@@ -42,8 +42,8 @@ internal static class BatchProcessor
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                logger.LogError(ex, "Elaborazione non riuscita per l'elemento {Index}", index);
-                results.Add(new(index, null, "Impossibile elaborare il testo. Riprovare più tardi."));
+                logger.LogError(ex, "Failed to process item {Index}", index);
+                results.Add(new(index, null, "Unable to process the text. Please try again later."));
             }
 
             index++;

@@ -20,19 +20,19 @@ public sealed record EmbeddingSettings(
         var clientId = Environment.GetEnvironmentVariable("EMBEDDING_MANAGED_IDENTITY_CLIENT_ID");
 
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidOperationException("EMBEDDING_ENDPOINT deve essere un URL HTTPS valido.");
+            throw new InvalidOperationException("EMBEDDING_ENDPOINT must be a valid HTTPS URL.");
         if (string.IsNullOrWhiteSpace(deployment))
-            throw new InvalidOperationException("EMBEDDING_DEPLOYMENT è obbligatorio.");
-        if (!int.TryParse(dimensionValue, out var dimensions) || dimensions is < 1 or > 2000)
-            throw new InvalidOperationException("EMBEDDING_DIMENSIONS deve essere compreso tra 1 e 2000.");
+            throw new InvalidOperationException("EMBEDDING_DEPLOYMENT is required.");
+        if (!int.TryParse(dimensionValue, out var dimensions) || dimensions is < 1 or > 3072)
+            throw new InvalidOperationException("EMBEDDING_DIMENSIONS must be between 1 and 3072.");
 
         var authMode = FoundryAuthenticationMode.DefaultAzureCredential;
         if (!string.IsNullOrWhiteSpace(authModeValue)
             && (!Enum.TryParse(authModeValue, ignoreCase: true, out authMode) || !Enum.IsDefined(authMode)))
             throw new InvalidOperationException(
-                "EMBEDDING_AUTH_MODE deve essere DefaultAzureCredential, ManagedIdentity o ApiKey.");
+                "EMBEDDING_AUTH_MODE must be DefaultAzureCredential, ManagedIdentity, or ApiKey.");
         if (authMode == FoundryAuthenticationMode.ApiKey && string.IsNullOrWhiteSpace(apiKey))
-            throw new InvalidOperationException("EMBEDDING_API_KEY è obbligatorio quando EMBEDDING_AUTH_MODE è ApiKey.");
+            throw new InvalidOperationException("EMBEDDING_API_KEY is required when EMBEDDING_AUTH_MODE is ApiKey.");
 
         return new(uri, deployment, dimensions, authMode,
             string.IsNullOrWhiteSpace(apiKey) ? null : apiKey,
