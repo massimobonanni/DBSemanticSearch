@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DBSemanticSearch.Api;
+using DBSemanticSearch.Contracts;
 using DBSemanticSearch.Core.Entites;
 using DBSemanticSearch.Core.Interfaces;
 using DBSemanticSearch.Core.Services;
@@ -9,44 +10,59 @@ namespace DBSemanticSearch.Tests;
 
 public sealed class BatchProcessorTests
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new BatchTextsConverter() }
+    };
+
     [Fact]
     public async Task InvalidItemAndFailedEmbeddingDoNotPreventOtherItemsFromBeingSaved()
     {
-        using var document = JsonDocument.Parse("""["primo",null," ","fallisce","ultimo"]""");
+        var request = JsonSerializer.Deserialize<TextBatchRequest>(
+            """{"texts":["primo",null," ","fallisce",42,{"a":1},"ultimo"]}""", JsonOptions)!;
         var repository = new RecordingRepository();
         var texts = new TextService(repository, new FailingEmbedding());
 
-        var response = await BatchProcessor.ProcessAsync(document.RootElement, texts,
+        var response = await BatchProcessor.ProcessAsync(request.Texts, texts,
             NullLogger.Instance, CancellationToken.None);
 
         Assert.Equal(2, response.Inserted);
-        Assert.Equal(5, response.Items.Count);
+        Assert.Equal(7, response.Items.Count);
         Assert.Equal(new[] { "primo", "ultimo" }, repository.SavedTexts);
         Assert.Equal(1, response.Items[1].Index);
         Assert.NotNull(response.Items[1].Error);
         Assert.NotNull(response.Items[2].Error);
         Assert.NotNull(response.Items[3].Error);
-        Assert.Equal("ultimo", response.Items[4].Document?.Text);
+        Assert.Equal("The item must be a string.", response.Items[4].Error);
+        Assert.Equal("The item must be a string.", response.Items[5].Error);
+        Assert.Equal("ultimo", response.Items[6].Document?.Text);
     }
 
     [Theory]
-    [InlineData("[]")]
+    [InlineData("""{"texts":[]}""")]
     [InlineData("{}")]
     public async Task RejectsWrongBatchShape(string json)
     {
-        using var document = JsonDocument.Parse(json);
+        var request = JsonSerializer.Deserialize<TextBatchRequest>(json, JsonOptions)!;
         var texts = new TextService(new RecordingRepository(), new FailingEmbedding());
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            BatchProcessor.ProcessAsync(document.RootElement, texts, NullLogger.Instance, CancellationToken.None));
+            BatchProcessor.ProcessAsync(request.Texts, texts, NullLogger.Instance, CancellationToken.None));
+    }
+
+    [Fact]
+    public void RejectsNonArrayTexts()
+    {
+        Assert.Throws<JsonException>(() =>
+            JsonSerializer.Deserialize<TextBatchRequest>("""{"texts":"abc"}""", JsonOptions));
     }
 
     [Fact]
     public async Task RejectsMoreThanOneHundredItems()
     {
-        using var document = JsonDocument.Parse(JsonSerializer.Serialize(Enumerable.Repeat("test", 101)));
         var texts = new TextService(new RecordingRepository(), new FailingEmbedding());
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            BatchProcessor.ProcessAsync(document.RootElement, texts, NullLogger.Instance, CancellationToken.None));
+            BatchProcessor.ProcessAsync(Enumerable.Repeat<string?>("test", 101).ToList(), texts,
+                NullLogger.Instance, CancellationToken.None));
     }
 
     private sealed class FailingEmbedding : IEmbeddingService

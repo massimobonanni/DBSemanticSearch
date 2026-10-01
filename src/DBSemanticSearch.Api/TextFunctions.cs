@@ -12,7 +12,11 @@ namespace DBSemanticSearch.Api;
 public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logger)
 {
     private const int MaxRequestBytes = 1_048_576;
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const string EmptyBodyMessage = "The request body is required.";
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new BatchTextsConverter() }
+    };
 
     [Function("AddText")]
     public async Task<HttpResponseData> AddText(
@@ -21,9 +25,8 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         var cancellationToken = request.FunctionContext.CancellationToken;
         try
         {
-            using var json = await ReadJsonAsync(request, cancellationToken);
-            var text = ReadText(json.RootElement);
-            var document = await texts.AddAsync(text, cancellationToken);
+            var body = await ReadBodyAsync<AddTextRequest>(request, cancellationToken);
+            var document = await texts.AddAsync(body.Text, cancellationToken);
             return await RespondAsync(request, HttpStatusCode.Created, ToDto(document), cancellationToken);
         }
         catch (ArgumentException ex)
@@ -48,11 +51,8 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         var cancellationToken = request.FunctionContext.CancellationToken;
         try
         {
-            using var json = await ReadJsonAsync(request, cancellationToken);
-            if (json.RootElement.ValueKind != JsonValueKind.Object
-                || !json.RootElement.TryGetProperty("texts", out var entries))
-                throw new ArgumentException("A JSON object with a 'texts' array is required.");
-            var batch = await BatchProcessor.ProcessAsync(entries, texts, logger, cancellationToken);
+            var body = await ReadBodyAsync<TextBatchRequest>(request, cancellationToken);
+            var batch = await BatchProcessor.ProcessAsync(body.Texts, texts, logger, cancellationToken);
             return await RespondAsync(request, HttpStatusCode.OK, batch, cancellationToken);
         }
         catch (ArgumentException ex)
@@ -77,8 +77,8 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         var cancellationToken = request.FunctionContext.CancellationToken;
         try
         {
-            using var json = await ReadJsonAsync(request, cancellationToken);
-            var hits = await texts.SearchAsync(ReadText(json.RootElement), cancellationToken);
+            var body = await ReadBodyAsync<SearchRequest>(request, cancellationToken);
+            var hits = await texts.SearchAsync(body.Text, cancellationToken);
             var result = new SearchResponse(hits.Select(hit => new SearchResult(ToDto(hit.Document), hit.Distance)).ToArray());
             return await RespondAsync(request, HttpStatusCode.OK, result, cancellationToken);
         }
@@ -97,17 +97,10 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         }
     }
 
-    private static string? ReadText(JsonElement root)
-    {
-        if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("text", out var value)
-            || value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
-            throw new ArgumentException("A JSON object with a 'text' string property is required.");
-        return value.GetString();
-    }
-
     private static TextDto ToDto(TextDocument document) => new(document.Id, document.Text, document.CreatedAt);
 
-    private static async Task<JsonDocument> ReadJsonAsync(HttpRequestData request, CancellationToken cancellationToken)
+    private static async Task<T> ReadBodyAsync<T>(HttpRequestData request, CancellationToken cancellationToken)
+        where T : class
     {
         using var buffer = new MemoryStream();
         var chunk = new byte[8192];
@@ -119,8 +112,12 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
             buffer.Write(chunk, 0, count);
         }
 
+        if (buffer.Length == 0)
+            throw new ArgumentException(EmptyBodyMessage);
+
         buffer.Position = 0;
-        return await JsonDocument.ParseAsync(buffer, cancellationToken: cancellationToken);
+        return await JsonSerializer.DeserializeAsync<T>(buffer, JsonOptions, cancellationToken)
+            ?? throw new ArgumentException(EmptyBodyMessage);
     }
 
     private static async Task<HttpResponseData> RespondAsync<T>(
