@@ -9,6 +9,7 @@ param location string
 
 var abbreviations = loadJsonContent('./abbreviations.json')
 var token = toLower(uniqueString(subscription().id, environmentName, location))
+var webAppName = '${abbreviations.webSitesAppService}${token}'
 var tags = {
   'azd-env-name': environmentName
 }
@@ -63,6 +64,7 @@ module backend 'backend.bicep' = {
     embeddingDeploymentName: foundry.outputs.embeddingDeploymentName
     embeddingDimensions: foundry.outputs.embeddingDimensions
     applicationInsightsConnectionString: monitor.outputs.connectionString
+    frontendOrigin: 'https://${webAppName}.azurewebsites.net'
   }
 }
 
@@ -74,6 +76,7 @@ module frontend 'frontend.bicep' = {
     token: token
     tags: tags
     functionAppName: backend.outputs.functionName
+    webAppName: webAppName
   }
 }
 

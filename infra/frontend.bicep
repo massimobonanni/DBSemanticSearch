@@ -3,10 +3,10 @@ param location string
 param token string
 param tags object
 param functionAppName string
+param webAppName string
 
 var abbreviations = loadJsonContent('./abbreviations.json')
 var planName = '${abbreviations.webServerFarms}web-${token}'
-var webAppName = '${abbreviations.webSitesAppService}${token}'
 
 resource functionApp 'Microsoft.Web/sites@2024-04-01' existing = {
   name: functionAppName

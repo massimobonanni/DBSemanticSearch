@@ -11,6 +11,7 @@ param embeddingDeploymentName string
 @maxValue(3072)
 param embeddingDimensions int
 param applicationInsightsConnectionString string
+param frontendOrigin string
 
 var abbreviations = loadJsonContent('./abbreviations.json')
 var functionName = '${abbreviations.webSitesFunctions}${token}'
@@ -71,6 +72,13 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     siteConfig: {
       minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'
+          frontendOrigin
+        ]
+        supportCredentials: false
+      }
     }
     functionAppConfig: {
       deployment: {
