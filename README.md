@@ -16,6 +16,39 @@
 | `infra` | Azure Bicep resources and AZD parameters |
 | `tests` | Unit tests for services, batches, and the client |
 
+## Architecture
+
+```mermaid
+flowchart LR
+  browser[User's browser]
+
+  subgraph Azure[Azure]
+    web[Blazor Server<br/>Windows App Service]
+
+    subgraph backend[Backend]
+      api[Azure Functions<br/>.NET isolated]
+      core[Core<br/>TextService]
+      foundryAdapter[Foundry embedding adapter]
+      postgresAdapter[PostgreSQL repository]
+    end
+
+    foundry[Microsoft Foundry<br/>text-embedding-3-large]
+    database[Azure Database for PostgreSQL<br/>pgvector]
+    insights[Application Insights]
+  end
+
+  browser <-->|HTTPS and interactive circuit| web
+  web -->|Server-side HTTPS<br/>Function key| api
+  api --> core
+  core -->|Generate embeddings| foundryAdapter
+  foundryAdapter -->|Embedding request| foundry
+  core -->|Store texts and search vectors| postgresAdapter
+  postgresAdapter --> database
+  api -.->|Telemetry| insights
+```
+
+The browser communicates only with the Blazor Server frontend. The frontend calls the Functions API from the server, keeping the Function key out of browser assets and requests. The API uses Foundry to generate embeddings and PostgreSQL with `pgvector` to store and search texts.
+
 ## File format and API
 
 The JSON file must be an object with a `texts` array containing 1–100 items. Texts cannot be empty or consist only of whitespace and cannot exceed 10,000 characters; the maximum file/request size is 1 MiB.
