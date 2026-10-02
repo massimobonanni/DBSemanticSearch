@@ -12,12 +12,20 @@ var token = toLower(uniqueString(subscription().id, environmentName, location))
 var webAppName = '${abbreviations.webSitesAppService}${token}'
 var tags = {
   'azd-env-name': environmentName
+  SecurityControl: 'Ignore'
 }
 
 resource group 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: '${abbreviations.resourcesResourceGroups}${environmentName}'
   location: location
   tags: tags
+}
+
+resource rgTags 'Microsoft.Resources/tags@2024-03-01' = {
+  name: 'default'
+  properties: {
+    tags: tags
+  }
 }
 
 module monitor 'monitor.bicep' = {
