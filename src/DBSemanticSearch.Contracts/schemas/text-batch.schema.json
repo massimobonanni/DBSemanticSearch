@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/db-semantic-search/text-batch.schema.json",
+  "title": "Text batch",
+  "description": "Text upload format; each invalid item is reported without interrupting the others.",
+  "type": "object",
+  "required": ["texts"],
+  "properties": {
+    "texts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "type": "string", "minLength": 1, "maxLength": 10000, "pattern": "\\S" }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,131 @@
+@page "/texts"
+@using Microsoft.JSInterop
+@inject SemanticSearchClient Client
+@inject IJSRuntime JS
+
+<PageTitle>Add texts</PageTitle>
+<h1>Add texts</h1>
+
+<section class="mb-5">
+    <h2>Single text</h2>
+    <label for="new-text" class="form-label">Text to vectorize</label>
+    <textarea id="new-text" class="form-control mb-3" rows="5" maxlength="10000" @bind="text"></textarea>
+    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="AddTextAsync">Save text</button>
+    @if (saved is not null)
+    {
+        <p role="status" class="alert alert-success mt-3">Text saved: @saved.Id</p>
+    }
+</section>
+
+<section>
+    <h2>Upload a JSON file</h2>
+    <p>Format: <code>{"texts":["First text","Second text"]}</code> (up to 100 items, file size up to 1 MiB).
+        Each valid item is saved even if other items fail.</p>
+    <InputFile OnChange="UploadAsync" accept=".json,application/json" disabled="@busy" />
+    @if (batch is not null)
+    {
+        <p role="status" class="alert alert-info mt-3">Saved @batch.Inserted of @batch.Items.Count texts.</p>
+        @if (batch.Items.Any(item => item.Error is not null))
+        {
+            <ul class="list-group">
+                @foreach (var item in batch.Items.Where(item => item.Error is not null))
+                {
+                    <li class="list-group-item list-group-item-warning">Item @(item.Index + 1): @item.Error</li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+<section class="mt-5">
+    <h2>Delete stored texts</h2>
+    <button type="button" class="btn btn-outline-danger" disabled="@busy" @onclick="DeleteAllAsync">Delete all texts</button>
+    @if (deleted)
+    {
+        <p role="status" class="alert alert-success mt-3">All stored texts and embeddings have been deleted.</p>
+    }
+</section>
+
+@if (error is not null)
+{
+    <p role="alert" class="alert alert-danger mt-3">@error</p>
+}
+
+@code {
+    private string text = "";
+    private bool busy;
+    private bool deleted;
+    private string? error;
+    private TextDto? saved;
+    private BatchResponse? batch;
+
+    private async Task AddTextAsync()
+    {
+        busy = true;
+        error = null;
+        saved = null;
+        deleted = false;
+        try
+        {
+            saved = await Client.AddAsync(text);
+            text = "";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task UploadAsync(InputFileChangeEventArgs args)
+    {
+        busy = true;
+        error = null;
+        batch = null;
+        deleted = false;
+        try
+        {
+            await using var stream = args.File.OpenReadStream(1_048_576);
+            using var reader = new StreamReader(stream);
+            batch = await Client.AddBatchJsonAsync(await reader.ReadToEndAsync());
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or System.Text.Json.JsonException or ArgumentException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task DeleteAllAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            if (!await JS.InvokeAsync<bool>("confirm",
+                "Delete all stored texts and embeddings? This action cannot be undone."))
+                return;
+
+            error = null;
+            deleted = false;
+            await Client.DeleteAllAsync();
+            saved = null;
+            batch = null;
+            deleted = true;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or JSException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

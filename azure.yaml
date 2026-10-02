@@ -1,0 +1,36 @@
+name: db-semantic-search
+infra:
+  provider: bicep
+  path: infra
+hooks:
+  postprovision:
+    windows:
+      shell: pwsh
+      run: ./scripts/azd/configure-postgres-entra-admin.ps1
+      interactive: true
+      continueOnError: false
+    posix:
+      shell: sh
+      run: sh ./scripts/azd/configure-postgres-entra-admin.sh
+      interactive: true
+      continueOnError: false
+  postdeploy:
+    windows:
+      shell: pwsh
+      run: ./scripts/azd/configure-function-key.ps1
+      interactive: false
+      continueOnError: false
+    posix:
+      shell: sh
+      run: sh ./scripts/azd/configure-function-key.sh
+      interactive: false
+      continueOnError: false
+services:
+  api:
+    project: ./src/DBSemanticSearch.Api
+    language: dotnet
+    host: function
+  web:
+    project: ./src/DBSemanticSearch.Web
+    language: dotnet
+    host: appservice
