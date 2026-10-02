@@ -84,7 +84,9 @@ You need .NET SDK 10, Azure Functions Core Tools v4, PostgreSQL with pgvector, A
 
 ## Azure deployment
 
-You need the Azure Developer CLI (`azd`), an authenticated Azure CLI (`az login`), and .NET SDK 10. You also need a subscription with resource creation and role assignment permissions, and a region that supports Windows App Service, Flex Consumption, PostgreSQL Flexible Server, and the OpenAI model quota. `infra/main.bicep` orchestrates separate Bicep modules for the frontend, backend, database, Foundry, and monitoring. The Blazor Server frontend runs as an ASP.NET Core application on Windows App Service, with WebSockets enabled for interactive circuits; the browser communicates with the website, not directly with Functions. Bicep configures `ApiBaseUrl` and `FunctionKey` in App Service settings: the server reads them at runtime and sends the key in requests to Functions, without copying it into public assets. Both settings are required in Azure; locally, the key may be omitted. Azure HTTP Function endpoints require a function key. For multiple App Service instances, plan for session affinity and Blazor circuit management.
+See [Prerequisites](Prerequisites.md) for the tools, Azure permissions, region and model availability, AZD environment configuration, and `psql` setup required before running `azd up`.
+
+`infra/main.bicep` orchestrates separate Bicep modules for the frontend, backend, database, Foundry, and monitoring. The Blazor Server frontend runs as an ASP.NET Core application on Windows App Service, with WebSockets enabled for interactive circuits; the browser communicates with the website, not directly with Functions. Bicep configures `ApiBaseUrl` and `FunctionKey` in App Service settings: the server reads them at runtime and sends the key in requests to Functions, without copying it into public assets. Both settings are required in Azure; locally, the key may be omitted. Azure HTTP Function endpoints require a function key. For multiple App Service instances, plan for session affinity and Blazor circuit management.
 
 Before deployment, run `dotnet test DBSemanticSearch.sln` and `az bicep build --file infra/main.bicep`; with an AZD environment selected, you can run `azd package` without modifying Azure resources. In the web package, verify that `wwwroot` contains no `appsettings*.json`, function key, or WebAssembly bundle: ASP.NET Core configuration at the package root is not served as a static asset. After all services are deployed, the AZD `postdeploy` hook reads the Function host key and stores it in the App Service `FunctionKey` setting; the key is not emitted by Bicep or logged. After deployment, verify the `/`, `/texts`, and `/search` pages, WebSocket circuit reconnection, JSON upload, and a search; browser network requests must not show direct calls to the Function App or the key.
 
@@ -92,30 +94,11 @@ The Foundry module creates a Microsoft Foundry (`AIServices`) resource with a sy
 
 Application Insights is a single workspace-based instance (`appi-api-*`) shared through `AZURE_APPINSIGHTS_CONNECTION_STRING`; the Function App uses it to send telemetry. The frontend can use the same connection string if browser instrumentation is added. Foundry and PostgreSQL do not automatically send telemetry to Application Insights: their platform logs require Diagnostic Settings targeting the Log Analytics workspace.
 
-```powershell
-az login
-azd auth login
-azd env new dev
-azd env set AZURE_LOCATION swedencentral
-$account = az ad signed-in-user show | ConvertFrom-Json
-azd env set AZURE_POSTGRES_ENTRA_ADMIN_OBJECT_ID $account.id
-azd env set AZURE_POSTGRES_ENTRA_ADMIN_NAME $account.userPrincipalName
-azd env set AZURE_POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE User
-azd up
-```
+After completing the [prerequisites](Prerequisites.md) and selecting the configured AZD environment, deploy with `azd up`.
 
-The server uses Microsoft Entra ID exclusively: no PostgreSQL password is created. The `postprovision` hook waits for the server to be ready, configures the Entra administrator with a separate, repeatable Bicep deployment, and registers the Function identity as a PostgreSQL principal (`pgaadauth_create_principal_with_oid`, plus `USAGE, CREATE` on schema `public` of `semantic_search`). During registration it adds a temporary firewall rule for this machine's public IP and removes it at the end. It requires an authenticated Azure CLI (`az login`) as the administrator configured above, `psql` in `PATH`, and deployment permission on the resource group.
+The server uses Microsoft Entra ID exclusively: no PostgreSQL password is created. The `postprovision` hook waits for the server to be ready, configures the Entra administrator with a separate, repeatable Bicep deployment, and registers the Function identity as a PostgreSQL principal (`pgaadauth_create_principal_with_oid`, plus `USAGE, CREATE` on schema `public` of `semantic_search`). During registration it adds a temporary firewall rule for this machine's public IP and removes it at the end.
 
-On Windows, if `azd up` fails with `psql is required to register the Function identity in PostgreSQL`, install PostgreSQL 16 (matching the Azure Flexible Server version configured in `infra/database.bicep`) and check that `psql` is available in a new PowerShell terminal:
-
-```powershell
-winget install --id PostgreSQL.PostgreSQL.16 --exact
-psql --version
-```
-
-If `psql` is still not recognized, add `C:\Program Files\PostgreSQL\<version>\bin` to `PATH` and reopen the terminal. Then rerun `azd up` in the same AZD environment to complete the skipped `api` and `web` deployments.
-
-Choose a region compatible with the model. AZD values are stored locally in `.azure/` (excluded from Git). If deployment is performed by a service principal or you want to use a group as administrator, set the three `AZURE_POSTGRES_ENTRA_ADMIN_*` values with the corresponding name, object ID, and type. The first deployment may take several minutes while identities and role assignments propagate. The public PostgreSQL server configuration allows connections from Azure services (`0.0.0.0`): for exposed or regulated environments, replace it with a private networking architecture. **The function key stays on the server, but it does not authenticate users or make the Functions API private.** If the previous WebAssembly version published the key, rotate it after migration while coordinating any other consumers; the host key configured here authorizes all HTTP Functions in the app. Dedicated measures, such as Microsoft Entra/App Service Authentication or Azure API Management, are required to control user access or limit API exposure.
+The first deployment may take several minutes while identities and role assignments propagate. The public PostgreSQL server configuration allows connections from Azure services (`0.0.0.0`): for exposed or regulated environments, replace it with a private networking architecture. **The function key stays on the server, but it does not authenticate users or make the Functions API private.** If the previous WebAssembly version published the key, rotate it after migration while coordinating any other consumers; the host key configured here authorizes all HTTP Functions in the app. Dedicated measures, such as Microsoft Entra/App Service Authentication or Azure API Management, are required to control user access or limit API exposure.
 
 No PostgreSQL or Foundry credentials are configured in the app: the API uses `DB_AUTH_MODE=ManagedIdentity`, `EMBEDDING_AUTH_MODE=ManagedIdentity`, and its own system-assigned managed identity. Local secrets remain outside the repository.
 
