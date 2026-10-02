@@ -35,11 +35,17 @@ The project does not read environment variables directly and does not choose the
 
 ## Schema
 
-On the first operation, the repository verifies the following extension and table:
+Before the first operation, a PostgreSQL administrator must install the extension in the application database (not just in the `postgres` database):
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
+```
 
+On Azure PostgreSQL Flexible Server, `vector` must be enabled in `azure.extensions`, and installation requires a member of `azure_pg_admin`. The application identity must not be granted this administrative role. The `azd` postprovision hook installs the extension in `semantic_search` using the configured Microsoft Entra administrator.
+
+On the first operation, the repository checks that the extension is installed and creates the table:
+
+```sql
 CREATE TABLE IF NOT EXISTS documents (
     id uuid PRIMARY KEY,
     text text NOT NULL,
@@ -84,6 +90,18 @@ With the current automatic initialization, the application role must be able to:
 - read and insert rows in the `documents` table it creates.
 
 The `vector` extension must be allowed in the Flexible Server configuration and created by an administrator during bootstrap. In an environment with administrative migrations, you can pre-create the table and extension and further reduce the application identity's privileges.
+
+If an existing deployment reports PostgreSQL error `42501` for `CREATE EXTENSION vector`, complete the administrative bootstrap in the correct AZD environment:
+
+```powershell
+azd hooks run postprovision -e <environment-name>
+```
+
+This hook requires Azure CLI authentication as the configured Microsoft Entra administrator and `psql` on `PATH`. It configures the administrator and Function role, temporarily opens a firewall rule for the local client, installs the extension in `semantic_search`, and grants schema permissions. It does not deploy application code. To verify installation, connect to the application database and run:
+
+```sql
+SELECT current_database(), extversion FROM pg_extension WHERE extname = 'vector';
+```
 
 ## Registration
 

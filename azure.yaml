@@ -14,6 +14,17 @@ hooks:
       run: sh ./scripts/azd/configure-postgres-entra-admin.sh
       interactive: true
       continueOnError: false
+  postdeploy:
+    windows:
+      shell: pwsh
+      run: ./scripts/azd/configure-function-key.ps1
+      interactive: false
+      continueOnError: false
+    posix:
+      shell: sh
+      run: sh ./scripts/azd/configure-function-key.sh
+      interactive: false
+      continueOnError: false
 services:
   api:
     project: ./src/DBSemanticSearch.Api

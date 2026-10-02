@@ -9,12 +9,6 @@ param applicationInsightsConnectionString string
 var abbreviations = loadJsonContent('./abbreviations.json')
 var planName = '${abbreviations.webServerFarms}web-${token}'
 
-resource functionApp 'Microsoft.Web/sites@2024-04-01' existing = {
-  name: functionAppName
-}
-
-var functionHostKey = listKeys('${functionApp.id}/host/default', '2022-03-01').functionKeys.default
-
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: planName
   location: location
@@ -48,8 +42,7 @@ resource appSettings 'Microsoft.Web/sites/config@2024-04-01' = {
   name: 'appsettings'
   properties: {
     WEBSITE_RUN_FROM_PACKAGE: '1'
-    ApiBaseUrl: 'https://${functionApp.properties.defaultHostName}/'
-    FunctionKey: functionHostKey
+    ApiBaseUrl: 'https://${functionAppName}.azurewebsites.net/'
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsConnectionString
     ApplicationInsightsAgent_EXTENSION_VERSION: '~2'
     XDT_MicrosoftApplicationInsights_Mode: 'recommended'

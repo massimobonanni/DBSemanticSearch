@@ -121,8 +121,8 @@ fi
 az postgres flexible-server firewall-rule create \
     --subscription "$AZURE_SUBSCRIPTION_ID" \
     --resource-group "$AZURE_RESOURCE_GROUP" \
-    --name "$AZURE_POSTGRES_SERVER_NAME" \
-    --rule-name "$firewall_rule_name" \
+    --server-name "$AZURE_POSTGRES_SERVER_NAME" \
+    --name "$firewall_rule_name" \
     --start-ip-address "$client_ip" --end-ip-address "$client_ip" \
     --only-show-errors --output none
 
@@ -131,8 +131,8 @@ cleanup() {
     az postgres flexible-server firewall-rule delete \
         --subscription "$AZURE_SUBSCRIPTION_ID" \
         --resource-group "$AZURE_RESOURCE_GROUP" \
-        --name "$AZURE_POSTGRES_SERVER_NAME" \
-        --rule-name "$firewall_rule_name" \
+        --server-name "$AZURE_POSTGRES_SERVER_NAME" \
+        --name "$firewall_rule_name" \
         --yes --only-show-errors --output none || true
 }
 trap cleanup EXIT
@@ -144,10 +144,10 @@ attempt=1
 while [ "$attempt" -le 10 ]; do
     PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
     export PGPASSWORD
-    if psql "host=$AZURE_POSTGRES_HOST dbname=postgres user=$AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require" \
-            -v ON_ERROR_STOP=1 -q -c "$create_role_sql" &&
-        psql "host=$AZURE_POSTGRES_HOST dbname=$database_name user=$AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require" \
-            -v ON_ERROR_STOP=1 -q -c "$grant_sql"; then
+    if psql -v ON_ERROR_STOP=1 -q -c "$create_role_sql" \
+            "host=$AZURE_POSTGRES_HOST dbname=postgres user=$AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require" &&
+        psql -v ON_ERROR_STOP=1 -q -c "$grant_sql" \
+            "host=$AZURE_POSTGRES_HOST dbname=$database_name user=$AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require"; then
         printf "Registered '%s' as a PostgreSQL Microsoft Entra principal.\n" "$function_name"
         exit 0
     fi

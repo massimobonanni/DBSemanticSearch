@@ -112,8 +112,8 @@ $firewallRuleName = 'azd-postprovision-client'
 $firewallArguments = @(
     '--subscription', $env:AZURE_SUBSCRIPTION_ID,
     '--resource-group', $env:AZURE_RESOURCE_GROUP,
-    '--name', $env:AZURE_POSTGRES_SERVER_NAME,
-    '--rule-name', $firewallRuleName,
+    '--server-name', $env:AZURE_POSTGRES_SERVER_NAME,
+    '--name', $firewallRuleName,
     '--only-show-errors',
     '--output', 'none'
 )
@@ -135,9 +135,9 @@ try {
     $registered = $false
     for ($attempt = 1; $attempt -le 10; $attempt++) {
         $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
-        & psql "host=$env:AZURE_POSTGRES_HOST dbname=postgres user=$env:AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require" -v ON_ERROR_STOP=1 -q -c $createRoleSql
+        & psql -v ON_ERROR_STOP=1 -q -c $createRoleSql "host=$env:AZURE_POSTGRES_HOST dbname=postgres user=$env:AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require"
         if ($LASTEXITCODE -eq 0) {
-            & psql "host=$env:AZURE_POSTGRES_HOST dbname=$databaseName user=$env:AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require" -v ON_ERROR_STOP=1 -q -c $grantSql
+            & psql -v ON_ERROR_STOP=1 -q -c $grantSql "host=$env:AZURE_POSTGRES_HOST dbname=$databaseName user=$env:AZURE_POSTGRES_ENTRA_ADMIN_NAME sslmode=require"
             if ($LASTEXITCODE -eq 0) {
                 $registered = $true
                 break

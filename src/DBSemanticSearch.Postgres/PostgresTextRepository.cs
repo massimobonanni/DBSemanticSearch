@@ -69,9 +69,16 @@ public sealed class PostgresTextRepository(NpgsqlDataSource dataSource, int dime
         {
             if (_schemaReady) return;
             await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+            await using (var extensionCheck = new NpgsqlCommand(
+                "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector')", connection))
+            {
+                if (await extensionCheck.ExecuteScalarAsync(cancellationToken) is not true)
+                    throw new InvalidOperationException(
+                        "The vector extension is not installed in the current database. A PostgreSQL administrator must run CREATE EXTENSION IF NOT EXISTS vector in this database before using the application.");
+            }
+
             await using (var create = new NpgsqlCommand(
                 $"""
-                 CREATE EXTENSION IF NOT EXISTS vector;
                  CREATE TABLE IF NOT EXISTS documents (
                      id uuid PRIMARY KEY,
                      text text NOT NULL,
