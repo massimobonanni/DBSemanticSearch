@@ -45,6 +45,7 @@ flowchart LR
   core -->|Store texts and search vectors| postgresAdapter
   postgresAdapter --> database
   api -.->|Telemetry| insights
+  web -.->|Telemetry| insights
 ```
 
 The browser communicates only with the Blazor Server frontend. The frontend calls the Functions API from the server, keeping the Function key out of browser assets and requests. The API uses Foundry to generate embeddings and PostgreSQL with `pgvector` to store and search texts.
