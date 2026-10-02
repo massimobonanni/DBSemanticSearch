@@ -97,6 +97,24 @@ public sealed class TextFunctions(TextService texts, ILogger<TextFunctions> logg
         }
     }
 
+    [Function("DeleteAllTexts")]
+    public async Task<HttpResponseData> DeleteAll(
+        [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "texts")] HttpRequestData request)
+    {
+        var cancellationToken = request.FunctionContext.CancellationToken;
+        try
+        {
+            await texts.DeleteAllAsync(cancellationToken);
+            return request.CreateResponse(HttpStatusCode.NoContent);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Unable to delete all texts.");
+            return await RespondAsync(request, HttpStatusCode.InternalServerError,
+                new ErrorResponse("Unable to delete the texts. Please try again later."), cancellationToken);
+        }
+    }
+
     private static TextDto ToDto(TextDocument document) => new(document.Id, document.Text, document.CreatedAt);
 
     private static async Task<T> ReadBodyAsync<T>(HttpRequestData request, CancellationToken cancellationToken)

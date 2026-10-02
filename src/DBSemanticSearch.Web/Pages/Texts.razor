@@ -1,5 +1,7 @@
 @page "/texts"
+@using Microsoft.JSInterop
 @inject SemanticSearchClient Client
+@inject IJSRuntime JS
 
 <PageTitle>Add texts</PageTitle>
 <h1>Add texts</h1>
@@ -35,6 +37,15 @@
     }
 </section>
 
+<section class="mt-5">
+    <h2>Delete stored texts</h2>
+    <button type="button" class="btn btn-outline-danger" disabled="@busy" @onclick="DeleteAllAsync">Delete all texts</button>
+    @if (deleted)
+    {
+        <p role="status" class="alert alert-success mt-3">All stored texts and embeddings have been deleted.</p>
+    }
+</section>
+
 @if (error is not null)
 {
     <p role="alert" class="alert alert-danger mt-3">@error</p>
@@ -43,6 +54,7 @@
 @code {
     private string text = "";
     private bool busy;
+    private bool deleted;
     private string? error;
     private TextDto? saved;
     private BatchResponse? batch;
@@ -52,6 +64,7 @@
         busy = true;
         error = null;
         saved = null;
+        deleted = false;
         try
         {
             saved = await Client.AddAsync(text);
@@ -72,6 +85,7 @@
         busy = true;
         error = null;
         batch = null;
+        deleted = false;
         try
         {
             await using var stream = args.File.OpenReadStream(1_048_576);
@@ -79,6 +93,33 @@
             batch = await Client.AddBatchJsonAsync(await reader.ReadToEndAsync());
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or System.Text.Json.JsonException or ArgumentException)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task DeleteAllAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            if (!await JS.InvokeAsync<bool>("confirm",
+                "Delete all stored texts and embeddings? This action cannot be undone."))
+                return;
+
+            error = null;
+            deleted = false;
+            await Client.DeleteAllAsync();
+            saved = null;
+            batch = null;
+            deleted = true;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or JSException)
         {
             error = ex.Message;
         }

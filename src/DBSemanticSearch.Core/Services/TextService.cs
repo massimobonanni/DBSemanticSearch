@@ -22,6 +22,9 @@ public sealed class TextService(ITextRepository repository, IEmbeddingService em
         return await repository.SearchAsync(vector, SearchLimit, cancellationToken);
     }
 
+    public Task DeleteAllAsync(CancellationToken cancellationToken = default) =>
+        repository.DeleteAllAsync(cancellationToken);
+
     public static string Validate(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))

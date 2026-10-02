@@ -25,6 +25,12 @@ public sealed class SemanticSearchClient(HttpClient httpClient)
     public Task<SearchResponse> SearchAsync(string text, CancellationToken cancellationToken = default) =>
         PostAsync<SearchRequest, SearchResponse>("api/search", new(text), cancellationToken);
 
+    public async Task DeleteAllAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync("api/texts", cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     private async Task<TResponse> PostAsync<TRequest, TResponse>(
         string path, TRequest request, CancellationToken cancellationToken)
     {
@@ -33,6 +39,13 @@ public sealed class SemanticSearchClient(HttpClient httpClient)
     }
 
     private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
+            ?? throw new JsonException("The service response is empty.");
+    }
+
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (!response.IsSuccessStatusCode)
         {
@@ -50,8 +63,5 @@ public sealed class SemanticSearchClient(HttpClient httpClient)
             throw new HttpRequestException(error?.Error ?? $"HTTP error {(int)response.StatusCode}.",
                 null, response.StatusCode);
         }
-
-        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
-            ?? throw new JsonException("The service response is empty.");
     }
 }

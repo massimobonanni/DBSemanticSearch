@@ -53,6 +53,14 @@ public sealed class PostgresTextRepository(NpgsqlDataSource dataSource, int dime
         return hits;
     }
 
+    public async Task DeleteAllAsync(CancellationToken cancellationToken)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var command = new NpgsqlCommand("DELETE FROM documents", connection);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private string FormatVector(float[] embedding)
     {
         if (embedding.Length != dimensions || embedding.Any(value => !float.IsFinite(value)))

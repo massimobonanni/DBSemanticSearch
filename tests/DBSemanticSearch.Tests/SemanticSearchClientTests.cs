@@ -44,6 +44,43 @@ public sealed class SemanticSearchClientTests
         Assert.Equal(HttpStatusCode.BadRequest, exception.StatusCode);
     }
 
+    [Fact]
+    public async Task DeleteAllSendsDeleteAndAcceptsEmptyResponse()
+    {
+        var handler = new FakeHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Delete, request.Method);
+            Assert.Equal("/api/texts", request.RequestUri!.AbsolutePath);
+            Assert.Null(request.Content);
+            Assert.Equal("test-key", Assert.Single(request.Headers.GetValues("x-functions-key")));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+        });
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        httpClient.DefaultRequestHeaders.Add("x-functions-key", "test-key");
+        var client = new SemanticSearchClient(httpClient);
+
+        await client.DeleteAllAsync();
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, "{\"error\":\"Unauthorized.\"}", "Unauthorized.")]
+    [InlineData(HttpStatusCode.InternalServerError, "{\"error\":\"Unable to delete the texts.\"}", "Unable to delete the texts.")]
+    [InlineData(HttpStatusCode.BadGateway, "Service unavailable", "invalid service response")]
+    public async Task DeleteAllExposesErrors(HttpStatusCode status, string body, string expectedMessage)
+    {
+        var handler = new FakeHandler(_ => Task.FromResult(new HttpResponseMessage(status)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        }));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        var client = new SemanticSearchClient(httpClient);
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => client.DeleteAllAsync());
+
+        Assert.Contains(expectedMessage, exception.Message);
+        Assert.Equal(status, exception.StatusCode);
+    }
+
     private sealed class FakeHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> send) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(

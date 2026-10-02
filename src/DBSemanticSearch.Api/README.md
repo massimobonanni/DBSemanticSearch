@@ -27,7 +27,7 @@ The project is the composition root of the backend: it reads the configuration, 
 
 All endpoints:
 
-- use `POST` and accept and return `application/json`;
+- use `POST` with `application/json` requests and responses, except `DELETE /api/texts`, which has no request body and returns an empty response on success;
 - serialize JSON with web defaults (camelCase, case-insensitive property names);
 - require a Functions key (`AuthorizationLevel.Function`), passed in the `x-functions-key` header or the `code` query parameter;
 - are exposed under the default `/api` route prefix.
@@ -114,6 +114,14 @@ Response `200 OK` (`SearchResponse`):
 ```
 
 `distance` is the `pgvector` cosine distance: lower values mean more similar texts.
+
+### `DELETE /api/texts`
+
+Deletes all stored texts and their embeddings, preserving the `documents` table and database schema. No request body is required. Returns `204 No Content` with no response body, including when the collection is already empty. The operation does not generate embeddings.
+
+The frontend asks for confirmation before sending the request. This operation cannot be undone. Like the other endpoints, it requires a Functions key in Azure; the key does not authenticate individual users or restrict deletion to administrators.
+
+Database failures are logged and return `500 Internal Server Error` with an `ErrorResponse` containing `Unable to delete the texts. Please try again later.`
 
 ### Errors
 

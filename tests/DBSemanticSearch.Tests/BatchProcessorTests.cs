@@ -77,6 +77,12 @@ public sealed class BatchProcessorTests
     {
         public List<string> SavedTexts { get; } = [];
 
+        public Task DeleteAllAsync(CancellationToken cancellationToken)
+        {
+            SavedTexts.Clear();
+            return Task.CompletedTask;
+        }
+
         public Task<TextDocument> InsertAsync(string text, float[] embedding, CancellationToken cancellationToken)
         {
             SavedTexts.Add(text);

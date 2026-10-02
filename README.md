@@ -33,8 +33,11 @@ The batch processes each item in the supplied order. An invalid item or a model/
 | POST | `/api/texts` | `{"text":"..."}` | `201` with document `{id,text,createdAt}` |
 | POST | `/api/texts/batch` | `{"texts":["...", "..."]}` | `200` with `{inserted,items:[{index,document,error}]}` |
 | POST | `/api/search` | `{"text":"..."}` | `200` with `{results:[{document,distance}]}` (maximum 5) |
+| DELETE | `/api/texts` | None | `204` with no body; deletes all stored texts and embeddings |
 
 Format/validation problems return `400` with `{ "error": "..." }`; requests over 1 MiB return `413`. A lower cosine distance indicates greater similarity. For small collections the query performs an exact search without an approximate index.
+
+On the **Texts** page, **Delete all texts** opens a confirmation dialog before deleting every stored document and embedding. The operation is irreversible, preserves the database schema, and does not call the embedding model. Cancelling the dialog sends no deletion request. As the application has no user authentication, anyone who can access the frontend can perform this operation.
 
 ## Local execution
 

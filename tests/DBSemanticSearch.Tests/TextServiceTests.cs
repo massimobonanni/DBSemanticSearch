@@ -55,6 +55,24 @@ public sealed class TextServiceTests
         Assert.Equal(new float[] { 1, 2 }, repository.LastVector);
     }
 
+    [Fact]
+    public async Task DeleteAllRemovesDocumentsWithoutGeneratingEmbeddingsAndCanBeRepeated()
+    {
+        var repository = new FakeRepository();
+        var embedding = new FakeEmbedding();
+        var service = new TextService(repository, embedding);
+        await service.AddAsync("primo");
+        await service.AddAsync("secondo");
+        using var cancellation = new CancellationTokenSource();
+
+        await service.DeleteAllAsync(cancellation.Token);
+        await service.DeleteAllAsync(cancellation.Token);
+
+        Assert.Empty(await repository.SearchAsync([1, 2], 5, CancellationToken.None));
+        Assert.Equal("secondo", embedding.LastText);
+        Assert.Equal(cancellation.Token, repository.LastDeleteToken);
+    }
+
     private sealed class FakeEmbedding : IEmbeddingService
     {
         public string? LastText { get; private set; }
@@ -71,6 +89,14 @@ public sealed class TextServiceTests
         private readonly List<TextDocument> _documents = [];
         public float[]? LastVector { get; private set; }
         public int LastLimit { get; private set; }
+        public CancellationToken LastDeleteToken { get; private set; }
+
+        public Task DeleteAllAsync(CancellationToken cancellationToken)
+        {
+            LastDeleteToken = cancellationToken;
+            _documents.Clear();
+            return Task.CompletedTask;
+        }
 
         public Task<TextDocument> InsertAsync(string text, float[] embedding, CancellationToken cancellationToken)
         {
